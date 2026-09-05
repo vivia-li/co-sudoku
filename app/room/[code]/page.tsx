@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type {
   RealtimeChannel,
@@ -34,19 +34,11 @@ export default function RoomPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [status, setStatus] = useState<Status>("loading");
-  const [shareUrl, setShareUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
 
-  const presenceKeyRef = useRef<string | null>(null);
-  if (presenceKeyRef.current === null) {
-    presenceKeyRef.current =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `id-${Math.random().toString(36).slice(2)}`;
-  }
+  const presenceKey = useId();
   const selectedRef = useRef<number | null>(null);
-  selectedRef.current = selected;
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
@@ -59,12 +51,8 @@ export default function RoomPage() {
   }, []);
 
   useEffect(() => {
-    setShareUrl(
-      typeof window !== "undefined"
-        ? `${window.location.origin}/room/${code}`
-        : "",
-    );
-  }, [code]);
+    selectedRef.current = selected;
+  }, [selected]);
 
   const puzzleGrid = useMemo<Grid | null>(
     () => (room ? stringToGrid(room.puzzle) : null),
@@ -91,12 +79,12 @@ export default function RoomPage() {
   const peers = useMemo(() => {
     const map = new Map<number, string>();
     for (const p of players) {
-      if (p.id !== presenceKeyRef.current && p.cell != null) {
+      if (p.id !== presenceKey && p.cell != null) {
         map.set(p.cell, p.color);
       }
     }
     return map;
-  }, [players]);
+  }, [players, presenceKey]);
 
   const appendMove = useCallback((m: Move) => {
     setMoves((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
@@ -151,7 +139,7 @@ export default function RoomPage() {
     if (!supabase || !code || status !== "ready") return;
 
     const channel = supabase.channel(`room:${code}`, {
-      config: { presence: { key: presenceKeyRef.current! } },
+      config: { presence: { key: presenceKey } },
     });
 
     channel
@@ -203,7 +191,7 @@ export default function RoomPage() {
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [supabase, code, status, identity, appendMove]);
+  }, [supabase, code, status, identity, presenceKey, appendMove]);
 
   // 选中格变化时，同步到 presence
   useEffect(() => {
@@ -261,7 +249,8 @@ export default function RoomPage() {
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      const url = `${window.location.origin}/room/${code}`;
+      await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -367,7 +356,7 @@ export default function RoomPage() {
         <aside className="w-full space-y-4 lg:w-64">
           <PlayerList
             players={players}
-            selfKey={presenceKeyRef.current ?? ""}
+            selfKey={presenceKey}
           />
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
             <h2 className="mb-2 font-semibold text-zinc-300">如何一起玩</h2>
