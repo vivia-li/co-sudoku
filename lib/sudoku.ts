@@ -199,3 +199,23 @@ export function findConflicts(board: Grid): Set<string> {
 export function isBoardComplete(board: Grid): boolean {
   return board.every((row) => row.every((v) => v !== EMPTY));
 }
+
+// 与某格同行/列/宫的其它格子（不含自身），用于智能笔记
+export function peerCells(cell: number): number[] {
+  const r = Math.floor(cell / SIZE);
+  const c = cell % SIZE;
+  const set = new Set<number>();
+  for (let i = 0; i < SIZE; i++) {
+    set.add(r * SIZE + i);
+    set.add(i * SIZE + c);
+  }
+  const br = Math.floor(r / 3) * 3;
+  const bc = Math.floor(c / 3) * 3;
+  for (let rr = br; rr < br + 3; rr++) {
+    for (let cc = bc; cc < bc + 3; cc++) {
+      set.add(rr * SIZE + cc);
+    }
+  }
+  set.delete(cell);
+  return [...set];
+}

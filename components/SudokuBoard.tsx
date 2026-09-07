@@ -33,6 +33,8 @@ export default function SudokuBoard({
   notes,
   onSelect,
 }: Props) {
+  const selectedValue =
+    selected != null ? board[Math.floor(selected / SIZE)][selected % SIZE] : 0;
   const cells = [];
   for (let i = 0; i < SIZE * SIZE; i++) {
     const r = Math.floor(i / SIZE);
@@ -43,6 +45,7 @@ export default function SudokuBoard({
     const peerColor = peers.get(i);
     const conflict = conflicts.has(`${r},${c}`);
     const noteSet = notes.get(i);
+    const sameDigit = selectedValue !== 0 && value === selectedValue;
 
     cells.push(
       <div
@@ -57,6 +60,9 @@ export default function SudokuBoard({
       >
         {isSelected && (
           <span className="pointer-events-none absolute inset-0 bg-sky-400/25" />
+        )}
+        {!isSelected && sameDigit && (
+          <span className="pointer-events-none absolute inset-0 bg-sky-400/15" />
         )}
         {peerColor && !isSelected && (
           <span

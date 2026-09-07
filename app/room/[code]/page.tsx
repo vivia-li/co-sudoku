@@ -13,6 +13,7 @@ import NumberPad from "@/components/NumberPad";
 import {
   findConflicts,
   isBoardComplete,
+  peerCells,
   stringToGrid,
   type Grid,
 } from "@/lib/sudoku";
@@ -319,13 +320,21 @@ export default function RoomPage() {
         .single();
       if (!error && data) {
         appendMove(data as Move);
-        // 填入正式数字后清除该格的草稿笔记
+        // 填入正式数字后：
+        // 1) 清除该格草稿
+        // 2) 智能笔记：同行/列/宫其他格子里“该数字”的草稿一并删除
         if (value >= 1) {
           void supabase
             .from("notes")
             .delete()
             .eq("room_id", code)
             .eq("cell", cell);
+          void supabase
+            .from("notes")
+            .delete()
+            .eq("room_id", code)
+            .eq("digit", value)
+            .in("cell", peerCells(cell));
         }
       }
     },
@@ -529,18 +538,27 @@ export default function RoomPage() {
         </div>
 
         <aside className="w-full space-y-3 lg:w-72 lg:shrink-0">
-          <button
-            type="button"
-            onClick={() => setNoteMode((v) => !v)}
-            aria-pressed={noteMode}
-            className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-              noteMode
-                ? "border-amber-400 bg-amber-400/15 text-amber-700 dark:border-amber-500 dark:text-amber-300"
-                : "border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
-            }`}
-          >
-            ✏️ 笔记模式 {noteMode ? "· 开" : "· 关"}
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setNoteMode((v) => !v)}
+              aria-pressed={noteMode}
+              className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+                noteMode
+                  ? "border-amber-400 bg-amber-400/15 text-amber-700 dark:border-amber-500 dark:text-amber-300"
+                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
+              }`}
+            >
+              ✏️ 笔记{noteMode ? " 开" : " 关"}
+            </button>
+            <button
+              type="button"
+              onClick={() => placeInSelectedCell(0)}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
+            >
+              🧹 擦除
+            </button>
+          </div>
           <NumberPad
             remaining={remaining}
             noteMode={noteMode}
