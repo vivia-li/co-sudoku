@@ -15,7 +15,7 @@ type Props = {
 function borderStyle(r: number, c: number): CSSProperties {
   return {
     borderStyle: "solid",
-    borderColor: "#3f3f46", // zinc-700
+    borderColor: "var(--board-line)",
     borderTopWidth: r % 3 === 0 ? 2 : 1,
     borderLeftWidth: c % 3 === 0 ? 2 : 1,
     borderRightWidth: c === SIZE - 1 ? 2 : 0,
@@ -46,8 +46,10 @@ export default function SudokuBoard({
         key={i}
         onClick={() => onSelect(i)}
         className={`relative flex aspect-square cursor-pointer items-center justify-center text-xl font-medium tabular-nums sm:text-3xl ${
-          clue ? "bg-zinc-800/40 text-zinc-100" : "text-sky-400"
-        } ${conflict ? "!text-red-500" : ""}`}
+          clue
+            ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800/40 dark:text-zinc-100"
+            : "text-sky-600 dark:text-sky-400"
+        } ${conflict ? "!text-red-600 dark:!text-red-500" : ""}`}
         style={borderStyle(r, c)}
       >
         {isSelected && (
@@ -65,7 +67,7 @@ export default function SudokuBoard({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-lg bg-zinc-950 shadow-xl shadow-black/40">
+    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-lg bg-white shadow-xl shadow-black/10 dark:bg-zinc-950 dark:shadow-black/40">
       {cells}
     </div>
   );

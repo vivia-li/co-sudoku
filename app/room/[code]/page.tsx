@@ -8,6 +8,7 @@ import type {
 } from "@supabase/supabase-js";
 import SudokuBoard from "@/components/SudokuBoard";
 import PlayerList from "@/components/PlayerList";
+import NumberPad from "@/components/NumberPad";
 import {
   findConflicts,
   isBoardComplete,
@@ -71,10 +72,23 @@ export default function RoomPage() {
   );
 
   const won = useMemo(
-    () =>
-      board !== null && isBoardComplete(board) && conflicts.size === 0,
+    () => board !== null && isBoardComplete(board) && conflicts.size === 0,
     [board, conflicts],
   );
+
+  // 每个数字还剩多少个没填（9 - 当前已填数量，下限 0）
+  const remaining = useMemo(() => {
+    const counts = new Array<number>(10).fill(0);
+    if (board) {
+      for (let r = 0; r < 9; r++) {
+        for (let c = 0; c < 9; c++) {
+          const v = board[r][c];
+          if (v >= 1 && v <= 9) counts[v]++;
+        }
+      }
+    }
+    return counts.map((n) => Math.max(0, 9 - n));
+  }, [board]);
 
   const peers = useMemo(() => {
     const map = new Map<number, string>();
@@ -222,26 +236,34 @@ export default function RoomPage() {
     [supabase, room, code, identity.name, appendMove],
   );
 
-  // 键盘输入
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+  // 向当前选中的格子填数（数字键与九宫格共用）
+  const placeInSelectedCell = useCallback(
+    (value: number) => {
       const sel = selectedRef.current;
       if (sel == null || !puzzleGrid) return;
       const r = Math.floor(sel / 9);
       const c = sel % 9;
       if (puzzleGrid[r][c] !== 0) return; // 题目格不可编辑
+      void makeMove(sel, value);
+    },
+    [puzzleGrid, makeMove],
+  );
+
+  // 键盘输入
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key >= "1" && e.key <= "9") {
         e.preventDefault();
-        void makeMove(sel, Number(e.key));
+        placeInSelectedCell(Number(e.key));
       } else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") {
         e.preventDefault();
-        void makeMove(sel, 0);
+        placeInSelectedCell(0);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [puzzleGrid, makeMove]);
+  }, [placeInSelectedCell]);
 
   function onSelect(index: number) {
     setSelected((prev) => (prev === index ? null : index));
@@ -263,15 +285,15 @@ export default function RoomPage() {
       <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
         <p className="text-3xl">⚙️</p>
         <h1 className="mt-3 text-xl font-semibold">Supabase 尚未配置</h1>
-        <p className="mt-2 text-sm text-zinc-400">
-          请先设置 <code className="text-sky-400">NEXT_PUBLIC_SUPABASE_URL</code> 和{" "}
-          <code className="text-sky-400">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          请先设置 <code className="text-sky-600 dark:text-sky-400">NEXT_PUBLIC_SUPABASE_URL</code> 和{" "}
+          <code className="text-sky-600 dark:text-sky-400">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
           环境变量，并执行 supabase/schema.sql 建表。
         </p>
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="mt-6 rounded-lg border border-zinc-700 px-4 py-2 text-sm"
+          className="mt-6 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
         >
           返回首页
         </button>
@@ -282,7 +304,7 @@ export default function RoomPage() {
   if (status === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full border-2 border-zinc-700 border-t-sky-400 h-8 w-8" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-sky-500 dark:border-zinc-700 dark:border-t-sky-400" />
       </main>
     );
   }
@@ -294,7 +316,7 @@ export default function RoomPage() {
         <h1 className="mt-3 text-xl font-semibold">
           {status === "notfound" ? "房间不存在" : "加载失败"}
         </h1>
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
           {status === "notfound"
             ? `没有找到房间「${code}」，请确认房间号是否正确。`
             : "网络或服务异常，请重试。"}
@@ -304,7 +326,7 @@ export default function RoomPage() {
           onClick={() =>
             status === "notfound" ? router.push("/") : setReloadTick((t) => t + 1)
           }
-          className="mt-6 rounded-lg border border-zinc-700 px-4 py-2 text-sm"
+          className="mt-6 rounded-lg border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
         >
           {status === "notfound" ? "返回首页" : "重试"}
         </button>
@@ -318,18 +340,18 @@ export default function RoomPage() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="text-sm text-zinc-400 hover:text-zinc-200"
+          className="ml-12 text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
         >
           ← 首页
         </button>
         <div className="flex items-center gap-2">
-          <span className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm font-mono tracking-widest">
+          <span className="rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 font-mono text-sm tracking-widest dark:border-zinc-700 dark:bg-zinc-900">
             {code}
           </span>
           <button
             type="button"
             onClick={copyLink}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:border-sky-500 hover:text-sky-300"
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:border-sky-500 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-sky-300"
           >
             {copied ? "已复制 ✓" : "复制邀请链接"}
           </button>
@@ -348,18 +370,20 @@ export default function RoomPage() {
               onSelect={onSelect}
             />
           )}
-          <p className="mt-4 text-center text-sm text-zinc-500">
-            点击格子后用数字键 1–9 填写，退格键擦除 · 红色表示冲突
+          <div className="mt-4">
+            <NumberPad remaining={remaining} onSelect={placeInSelectedCell} />
+          </div>
+          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            点击格子后，用数字键或下方九宫格填写；退格键擦除 · 红色表示冲突
           </p>
         </div>
 
         <aside className="w-full space-y-4 lg:w-64">
-          <PlayerList
-            players={players}
-            selfKey={presenceKey}
-          />
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
-            <h2 className="mb-2 font-semibold text-zinc-300">如何一起玩</h2>
+          <PlayerList players={players} selfKey={presenceKey} />
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+            <h2 className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">
+              如何一起玩
+            </h2>
             <p>把上面的邀请链接发给朋友，大家会在同一张棋盘上实时看到彼此的落子。</p>
           </div>
         </aside>
@@ -367,10 +391,12 @@ export default function RoomPage() {
 
       {won && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-8 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
             <div className="text-5xl">🎉</div>
             <h2 className="mt-4 text-2xl font-bold">恭喜解出！</h2>
-            <p className="mt-2 text-zinc-400">你们合作完成了这道数独。</p>
+            <p className="mt-2 text-zinc-500 dark:text-zinc-400">
+              你们合作完成了这道数独。
+            </p>
             <button
               type="button"
               onClick={() => router.push("/")}

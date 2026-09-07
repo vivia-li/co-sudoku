@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  color-scheme: light;
+  --board-line: #d4d4d8; /* zinc-300 */
+}
+
+.dark {
   color-scheme: dark;
+  --board-line: #3f3f46; /* zinc-700 */
 }
 
 body {
