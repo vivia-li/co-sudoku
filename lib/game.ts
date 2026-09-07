@@ -24,6 +24,15 @@ export type Move = {
   created_at: string;
 };
 
+export type Note = {
+  id: number;
+  room_id: string;
+  cell: number; // 0..80
+  digit: number; // 1..9，笔记（候选数）
+  player_name: string;
+  created_at: string;
+};
+
 export type Player = {
   id: string;
   name: string;

@@ -9,6 +9,7 @@ type Props = {
   conflicts: Set<string>;
   selected: number | null;
   peers: Map<number, string>;
+  notes: Map<number, Set<number>>;
   onSelect: (index: number) => void;
 };
 
@@ -29,6 +30,7 @@ export default function SudokuBoard({
   conflicts,
   selected,
   peers,
+  notes,
   onSelect,
 }: Props) {
   const cells = [];
@@ -40,6 +42,7 @@ export default function SudokuBoard({
     const isSelected = selected === i;
     const peerColor = peers.get(i);
     const conflict = conflicts.has(`${r},${c}`);
+    const noteSet = notes.get(i);
 
     cells.push(
       <div
@@ -61,13 +64,26 @@ export default function SudokuBoard({
             style={{ boxShadow: `inset 0 0 0 2px ${peerColor}` }}
           />
         )}
-        {value !== 0 && <span className="relative">{value}</span>}
+        {value !== 0 ? (
+          <span className="relative">{value}</span>
+        ) : noteSet && noteSet.size > 0 ? (
+          <span className="relative grid h-full w-full grid-cols-3 grid-rows-3 p-0.5">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+              <span
+                key={d}
+                className="flex items-center justify-center text-[0.5em] leading-none text-zinc-500 dark:text-zinc-400"
+              >
+                {noteSet.has(d) ? d : ""}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </div>,
     );
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-lg bg-white shadow-xl shadow-black/10 dark:bg-zinc-950 dark:shadow-black/40">
+    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-lg bg-white shadow-xl shadow-black/10 lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
       {cells}
     </div>
   );

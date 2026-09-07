@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation";
 import type {
   RealtimeChannel,
+  RealtimePostgresDeletePayload,
   RealtimePostgresInsertPayload,
 } from "@supabase/supabase-js";
 import SudokuBoard from "@/components/SudokuBoard";
@@ -15,7 +16,13 @@ import {
   stringToGrid,
   type Grid,
 } from "@/lib/sudoku";
-import { buildBoard, type Move, type Player, type Room } from "@/lib/game";
+import {
+  buildBoard,
+  type Move,
+  type Note,
+  type Player,
+  type Room,
+} from "@/lib/game";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { getIdentity, type PlayerIdentity } from "@/lib/player";
 
@@ -32,14 +39,18 @@ export default function RoomPage() {
   });
   const [room, setRoom] = useState<Room | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [noteMode, setNoteMode] = useState(false);
   const [status, setStatus] = useState<Status>("loading");
   const [copied, setCopied] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
 
   const presenceKey = useId();
   const selectedRef = useRef<number | null>(null);
+  const boardRef = useRef<Grid | null>(null);
+  const notesRef = useRef<Note[]>([]);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
@@ -55,6 +66,10 @@ export default function RoomPage() {
     selectedRef.current = selected;
   }, [selected]);
 
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
+
   const puzzleGrid = useMemo<Grid | null>(
     () => (room ? stringToGrid(room.puzzle) : null),
     [room],
@@ -65,6 +80,10 @@ export default function RoomPage() {
     const sorted = [...moves].sort((a, b) => a.id - b.id);
     return buildBoard(room.puzzle, sorted);
   }, [room, moves]);
+
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
 
   const conflicts = useMemo(
     () => (board ? findConflicts(board) : new Set<string>()),
@@ -90,6 +109,20 @@ export default function RoomPage() {
     return counts.map((n) => Math.max(0, 9 - n));
   }, [board]);
 
+  // cell -> 笔记数字集合
+  const noteMap = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    for (const n of notes) {
+      let s = map.get(n.cell);
+      if (!s) {
+        s = new Set<number>();
+        map.set(n.cell, s);
+      }
+      s.add(n.digit);
+    }
+    return map;
+  }, [notes]);
+
   const peers = useMemo(() => {
     const map = new Map<number, string>();
     for (const p of players) {
@@ -104,7 +137,15 @@ export default function RoomPage() {
     setMoves((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
   }, []);
 
-  // 初始加载：房间信息 + 历史落子
+  const appendNote = useCallback((n: Note) => {
+    setNotes((prev) => (prev.some((x) => x.id === n.id) ? prev : [...prev, n]));
+  }, []);
+
+  const removeNoteById = useCallback((id: number) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  // 初始加载：房间信息 + 历史落子 + 笔记
   useEffect(() => {
     if (!configured) {
       setStatus("noconfig");
@@ -140,7 +181,18 @@ export default function RoomPage() {
         return;
       }
       setMoves((movesData as Move[]) ?? []);
-      setStatus("ready");
+
+      // 笔记加载失败不阻塞进房（表不存在时静默跳过）
+      const { data: notesData } = await supabase
+        .from("notes")
+        .select("*")
+        .eq("room_id", code)
+        .order("id", { ascending: true });
+      if (!cancelled) {
+        setNotes((notesData as Note[]) ?? []);
+      }
+
+      if (!cancelled) setStatus("ready");
     })();
 
     return () => {
@@ -148,7 +200,7 @@ export default function RoomPage() {
     };
   }, [code, configured, supabase, reloadTick]);
 
-  // 订阅实时落子 + 在线玩家 presence
+  // 订阅实时落子 + 笔记 + 在线玩家 presence
   useEffect(() => {
     if (!supabase || !code || status !== "ready") return;
 
@@ -167,6 +219,31 @@ export default function RoomPage() {
         },
         (payload: RealtimePostgresInsertPayload<Move>) => {
           appendMove(payload.new);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notes",
+          filter: `room_id=eq.${code}`,
+        },
+        (payload: RealtimePostgresInsertPayload<Note>) => {
+          appendNote(payload.new);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notes",
+          filter: `room_id=eq.${code}`,
+        },
+        (payload: RealtimePostgresDeletePayload<Note>) => {
+          const id = payload.old?.id;
+          if (typeof id === "number") removeNoteById(id);
         },
       )
       .on("presence", { event: "sync" }, () => {
@@ -205,7 +282,16 @@ export default function RoomPage() {
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [supabase, code, status, identity, presenceKey, appendMove]);
+  }, [
+    supabase,
+    code,
+    status,
+    identity,
+    presenceKey,
+    appendMove,
+    appendNote,
+    removeNoteById,
+  ]);
 
   // 选中格变化时，同步到 presence
   useEffect(() => {
@@ -231,12 +317,60 @@ export default function RoomPage() {
         })
         .select()
         .single();
-      if (!error && data) appendMove(data as Move);
+      if (!error && data) {
+        appendMove(data as Move);
+        // 填入正式数字后清除该格的草稿笔记
+        if (value >= 1) {
+          void supabase
+            .from("notes")
+            .delete()
+            .eq("room_id", code)
+            .eq("cell", cell);
+        }
+      }
     },
     [supabase, room, code, identity.name, appendMove],
   );
 
-  // 向当前选中的格子填数（数字键与九宫格共用）
+  const toggleNote = useCallback(
+    async (cell: number, digit: number) => {
+      if (!supabase || !room) return;
+      const exists = notesRef.current.some(
+        (n) => n.cell === cell && n.digit === digit,
+      );
+      if (exists) {
+        const { error } = await supabase
+          .from("notes")
+          .delete()
+          .eq("room_id", code)
+          .eq("cell", cell)
+          .eq("digit", digit);
+        if (!error) {
+          setNotes((prev) =>
+            prev.filter((n) => !(n.cell === cell && n.digit === digit)),
+          );
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("notes")
+          .insert({ room_id: code, cell, digit, player_name: identity.name })
+          .select()
+          .single();
+        if (!error && data) appendNote(data as Note);
+      }
+    },
+    [supabase, room, code, identity.name, appendNote],
+  );
+
+  const clearNotesInCell = useCallback(
+    async (cell: number) => {
+      if (!supabase) return;
+      await supabase.from("notes").delete().eq("room_id", code).eq("cell", cell);
+    },
+    [supabase, code],
+  );
+
+  // 向当前选中的格子输入（数字键与九宫格共用；笔记模式下写草稿）
   const placeInSelectedCell = useCallback(
     (value: number) => {
       const sel = selectedRef.current;
@@ -244,15 +378,33 @@ export default function RoomPage() {
       const r = Math.floor(sel / 9);
       const c = sel % 9;
       if (puzzleGrid[r][c] !== 0) return; // 题目格不可编辑
-      void makeMove(sel, value);
+
+      if (value === 0) {
+        // 擦除：笔记模式下清空草稿，否则擦除数字
+        if (noteMode) void clearNotesInCell(sel);
+        else void makeMove(sel, 0);
+        return;
+      }
+
+      if (noteMode) {
+        const b = boardRef.current;
+        if (b && b[r][c] !== 0) return; // 已填数字的格子不写笔记
+        void toggleNote(sel, value);
+      } else {
+        void makeMove(sel, value);
+      }
     },
-    [puzzleGrid, makeMove],
+    [puzzleGrid, noteMode, makeMove, toggleNote, clearNotesInCell],
   );
 
   // 键盘输入
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "n" || e.key === "N") {
+        setNoteMode((v) => !v);
+        return;
+      }
       if (e.key >= "1" && e.key <= "9") {
         e.preventDefault();
         placeInSelectedCell(Number(e.key));
@@ -335,8 +487,8 @@ export default function RoomPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-6">
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-6">
+      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -358,7 +510,7 @@ export default function RoomPage() {
         </div>
       </header>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="flex-1">
           {board && puzzleGrid && (
             <SudokuBoard
@@ -367,25 +519,34 @@ export default function RoomPage() {
               conflicts={conflicts}
               selected={selected}
               peers={peers}
+              notes={noteMap}
               onSelect={onSelect}
             />
           )}
-          <div className="mt-4">
-            <NumberPad remaining={remaining} onSelect={placeInSelectedCell} />
-          </div>
-          <p className="mt-4 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            点击格子后，用数字键或下方九宫格填写；退格键擦除 · 红色表示冲突
+          <p className="mt-3 text-center text-sm text-zinc-500 dark:text-zinc-400">
+            点击格子后用键盘或九宫格填写 · ✏️ 笔记模式打草稿（按 N 切换）· 红色为冲突
           </p>
         </div>
 
-        <aside className="w-full space-y-4 lg:w-64">
+        <aside className="w-full space-y-3 lg:w-72 lg:shrink-0">
+          <button
+            type="button"
+            onClick={() => setNoteMode((v) => !v)}
+            aria-pressed={noteMode}
+            className={`flex w-full items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
+              noteMode
+                ? "border-amber-400 bg-amber-400/15 text-amber-700 dark:border-amber-500 dark:text-amber-300"
+                : "border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
+            }`}
+          >
+            ✏️ 笔记模式 {noteMode ? "· 开" : "· 关"}
+          </button>
+          <NumberPad
+            remaining={remaining}
+            noteMode={noteMode}
+            onSelect={placeInSelectedCell}
+          />
           <PlayerList players={players} selfKey={presenceKey} />
-          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
-            <h2 className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">
-              如何一起玩
-            </h2>
-            <p>把上面的邀请链接发给朋友，大家会在同一张棋盘上实时看到彼此的落子。</p>
-          </div>
         </aside>
       </div>
 
