@@ -14,18 +14,18 @@ type Props = {
 };
 
 function borderStyle(r: number, c: number): CSSProperties {
-  const strongTop = r % 3 === 0;
-  const strongLeft = c % 3 === 0;
+  // 外框由容器自身的边框绘制（圆角因此完整），格子只画内部线：
+  // 3x3 宫格交界为粗线，其余为细线。
+  const strongTop = r > 0 && r % 3 === 0;
+  const strongLeft = c > 0 && c % 3 === 0;
   return {
     borderStyle: "solid",
-    borderTopWidth: strongTop ? 2 : 1,
+    borderTopWidth: r === 0 ? 0 : strongTop ? 2 : 1,
     borderTopColor: strongTop ? "var(--board-line-strong)" : "var(--board-line)",
-    borderLeftWidth: strongLeft ? 2 : 1,
+    borderLeftWidth: c === 0 ? 0 : strongLeft ? 2 : 1,
     borderLeftColor: strongLeft ? "var(--board-line-strong)" : "var(--board-line)",
-    borderRightWidth: c === SIZE - 1 ? 2 : 0,
-    borderRightColor: "var(--board-line-strong)",
-    borderBottomWidth: r === SIZE - 1 ? 2 : 0,
-    borderBottomColor: "var(--board-line-strong)",
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
   };
 }
 
@@ -65,9 +65,12 @@ export default function SudokuBoard({
       >
         {/* 悬停提示 */}
         <span className="pointer-events-none absolute inset-0 bg-transparent transition-colors group-hover:bg-[var(--accent-softer)]" />
-        {/* 选中高亮 */}
+        {/* 选中高亮：填充 + 描边，明显一些 */}
         {isSelected && (
-          <span className="pointer-events-none absolute inset-0 bg-[var(--accent-soft)]" />
+          <span
+            className="pointer-events-none absolute inset-0 bg-[var(--accent-soft)]"
+            style={{ boxShadow: "inset 0 0 0 2px var(--accent)" }}
+          />
         )}
         {/* 相同数字高亮 */}
         {!isSelected && sameDigit && (
@@ -107,7 +110,7 @@ export default function SudokuBoard({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-xl bg-white shadow-lg shadow-zinc-900/[0.04] ring-1 ring-zinc-900/5 lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40 dark:ring-white/5">
+    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-xl border-2 border-[var(--board-line-strong)] bg-white shadow-lg shadow-zinc-900/[0.04] lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
       {cells}
     </div>
   );
