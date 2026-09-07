@@ -73,7 +73,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-6 py-12">
       <div className="mb-10 text-center">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] shadow-lg shadow-indigo-500/25">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] shadow-lg shadow-blue-500/25">
           <span className="grid grid-cols-3 gap-1.5">
             {[1, 1, 0, 0, 1, 0, 1, 0, 1].map((filled, i) => (
               <span
@@ -137,7 +137,7 @@ export default function HomePage() {
           type="button"
           onClick={createRoom}
           disabled={busy}
-          className="w-full rounded-lg bg-[var(--accent)] py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-[var(--accent)] py-3 text-sm font-semibold text-white shadow-sm shadow-blue-500/25 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? "创建中…" : "创建房间"}
         </button>

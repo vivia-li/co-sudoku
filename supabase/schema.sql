@@ -34,6 +34,11 @@ create table if not exists public.notes (
 
 create index if not exists notes_room_idx on public.notes (room_id);
 
+-- 关键：Realtime 的 DELETE 事件需要 REPLICA IDENTITY FULL，
+-- 否则 old_record 只有主键、不含 room_id，带 room_id 过滤的客户端将收不到删除事件
+--（表现为：自己删除笔记后其它玩家看不到，或本地擦除笔记后界面不刷新）。
+alter table public.notes replica identity full;
+
 -- 开启行级安全（RLS）
 alter table public.rooms enable row level security;
 alter table public.moves enable row level security;

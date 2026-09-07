@@ -4,20 +4,20 @@
 
 :root {
   color-scheme: light;
-  --board-line: #e4e4e7; /* 细分隔线 */
-  --board-line-strong: #a1a1aa; /* 3x3 宫格与边框 */
-  --accent: #4f46e5; /* indigo-600 */
-  --accent-soft: rgba(99, 102, 241, 0.1);
-  --accent-softer: rgba(99, 102, 241, 0.06);
+  --board-line: #e5e7eb; /* 细分隔线（浅灰） */
+  --board-line-strong: #9ca3af; /* 3x3 宫格与边框 */
+  --accent: #2563eb; /* blue-600，用户填写的数字 */
+  --accent-soft: rgba(37, 99, 235, 0.13);
+  --accent-softer: rgba(37, 99, 235, 0.07);
 }
 
 .dark {
   color-scheme: dark;
-  --board-line: #27272a;
-  --board-line-strong: #52525b;
-  --accent: #818cf8; /* indigo-400 */
-  --accent-soft: rgba(129, 140, 248, 0.14);
-  --accent-softer: rgba(129, 140, 248, 0.08);
+  --board-line: #303038;
+  --board-line-strong: #5f5f6b;
+  --accent: #60a5fa; /* blue-400 */
+  --accent-soft: rgba(96, 165, 250, 0.17);
+  --accent-softer: rgba(96, 165, 250, 0.09);
 }
 
 html,

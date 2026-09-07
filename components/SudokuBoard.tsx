@@ -14,12 +14,18 @@ type Props = {
 };
 
 function borderStyle(r: number, c: number): CSSProperties {
+  const strongTop = r % 3 === 0;
+  const strongLeft = c % 3 === 0;
   return {
     borderStyle: "solid",
-    borderTopWidth: r % 3 === 0 ? 2 : 1,
-    borderLeftWidth: c % 3 === 0 ? 2 : 1,
+    borderTopWidth: strongTop ? 2 : 1,
+    borderTopColor: strongTop ? "var(--board-line-strong)" : "var(--board-line)",
+    borderLeftWidth: strongLeft ? 2 : 1,
+    borderLeftColor: strongLeft ? "var(--board-line-strong)" : "var(--board-line)",
     borderRightWidth: c === SIZE - 1 ? 2 : 0,
+    borderRightColor: "var(--board-line-strong)",
     borderBottomWidth: r === SIZE - 1 ? 2 : 0,
+    borderBottomColor: "var(--board-line-strong)",
   };
 }
 
@@ -65,7 +71,7 @@ export default function SudokuBoard({
         )}
         {/* 相同数字高亮 */}
         {!isSelected && sameDigit && (
-          <span className="pointer-events-none absolute inset-0 bg-[var(--accent-soft)]/60" />
+          <span className="pointer-events-none absolute inset-0 bg-[var(--accent-softer)]" />
         )}
         {/* 其他玩家所在格 */}
         {peerColor && !isSelected && (

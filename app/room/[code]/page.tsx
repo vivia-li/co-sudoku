@@ -67,11 +67,13 @@ export default function RoomPage() {
   const [copied, setCopied] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
   const [noteError, setNoteError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const presenceKey = useId();
   const selectedRef = useRef<number | null>(null);
   const boardRef = useRef<Grid | null>(null);
   const notesRef = useRef<Note[]>([]);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const subscribedRef = useRef(false);
@@ -164,6 +166,12 @@ export default function RoomPage() {
 
   const removeNoteById = useCallback((id: number) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const showNotice = useCallback((msg: string) => {
+    setNotice(msg);
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = setTimeout(() => setNotice(null), 2200);
   }, []);
 
   // 初始加载：房间信息 + 历史落子 + 笔记
@@ -268,7 +276,7 @@ export default function RoomPage() {
         },
         (payload: RealtimePostgresDeletePayload<Note>) => {
           const id = payload.old?.id;
-          if (typeof id === "number") removeNoteById(id);
+          if (id != null) removeNoteById(Number(id));
         },
       )
       .on("presence", { event: "sync" }, () => {
@@ -348,6 +356,15 @@ export default function RoomPage() {
         // 1) 清除该格草稿
         // 2) 智能笔记：同行/列/宫其他格子里“该数字”的草稿一并删除
         if (value >= 1) {
+          const peers = peerCells(cell);
+          const peerSet = new Set(peers);
+          // 本地立即同步移除相关笔记，避免依赖 Realtime DELETE 回推
+          setNotes((prev) =>
+            prev.filter(
+              (n) =>
+                n.cell !== cell && !(n.digit === value && peerSet.has(n.cell)),
+            ),
+          );
           void supabase
             .from("notes")
             .delete()
@@ -358,7 +375,7 @@ export default function RoomPage() {
             .delete()
             .eq("room_id", code)
             .eq("digit", value)
-            .in("cell", peerCells(cell));
+            .in("cell", peers);
         }
       }
     },
@@ -409,10 +426,30 @@ export default function RoomPage() {
         .delete()
         .eq("room_id", code)
         .eq("cell", cell);
-      if (error) setNoteError(noteErrorMessage(error.code));
+      if (!error) {
+        // 本地立即移除该格笔记，不依赖 Realtime 回推（Realtime DELETE 可能因过滤条件收不到）
+        setNotes((prev) => prev.filter((n) => n.cell !== cell));
+      } else {
+        setNoteError(noteErrorMessage(error.code));
+      }
     },
     [supabase, code],
   );
+
+  // 擦除选中的格子：数字与笔记一并清空（不依赖当前是“数字”还是“笔记”模式）
+  const eraseSelectedCell = useCallback(async () => {
+    const sel = selectedRef.current;
+    if (sel == null || !puzzleGrid) {
+      showNotice("请先选择一个格子");
+      return;
+    }
+    const r = Math.floor(sel / 9);
+    const c = sel % 9;
+    if (puzzleGrid[r][c] !== 0) return; // 题目格不可编辑
+    const b = boardRef.current;
+    if (b && b[r][c] !== 0) await makeMove(sel, 0); // 擦除数字
+    await clearNotesInCell(sel); // 清空笔记
+  }, [puzzleGrid, makeMove, clearNotesInCell, showNotice]);
 
   // 向当前选中的格子输入（数字键与九宫格共用；笔记模式下写草稿）
   const placeInSelectedCell = useCallback(
@@ -424,9 +461,7 @@ export default function RoomPage() {
       if (puzzleGrid[r][c] !== 0) return; // 题目格不可编辑
 
       if (value === 0) {
-        // 擦除：笔记模式下清空草稿，否则擦除数字
-        if (noteMode) void clearNotesInCell(sel);
-        else void makeMove(sel, 0);
+        void eraseSelectedCell();
         return;
       }
 
@@ -438,7 +473,7 @@ export default function RoomPage() {
         void makeMove(sel, value);
       }
     },
-    [puzzleGrid, noteMode, makeMove, toggleNote, clearNotesInCell],
+    [puzzleGrid, noteMode, makeMove, toggleNote, eraseSelectedCell],
   );
 
   // 键盘输入
@@ -634,11 +669,11 @@ export default function RoomPage() {
             </div>
             <button
               type="button"
-              onClick={() => placeInSelectedCell(0)}
-              aria-label="擦除"
-              className="flex w-12 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
+              onClick={() => void eraseSelectedCell()}
+              className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-zinc-200 px-3 text-sm font-medium text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
             >
               <EraserIcon className="h-4 w-4" />
+              擦除
             </button>
           </div>
 
@@ -646,6 +681,12 @@ export default function RoomPage() {
           <PlayerList players={players} selfKey={presenceKey} />
         </aside>
       </div>
+
+      {notice && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-full bg-zinc-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+          {notice}
+        </div>
+      )}
 
       {won && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
