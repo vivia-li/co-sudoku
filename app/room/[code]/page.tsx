@@ -11,6 +11,14 @@ import SudokuBoard from "@/components/SudokuBoard";
 import PlayerList from "@/components/PlayerList";
 import NumberPad from "@/components/NumberPad";
 import {
+  ArrowLeftIcon,
+  CheckIcon,
+  CopyIcon,
+  EraserIcon,
+  PenIcon,
+  PencilIcon,
+} from "@/components/icons";
+import {
   findConflicts,
   isBoardComplete,
   peerCells,
@@ -28,6 +36,17 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { getIdentity, type PlayerIdentity } from "@/lib/player";
 
 type Status = "loading" | "ready" | "notfound" | "error" | "noconfig";
+
+// 把笔记相关的数据库错误翻译成可读提示（重点是“表不存在”场景）
+function noteErrorMessage(code?: string): string {
+  if (code === "PGRST205") {
+    return "笔记功能暂不可用：数据库缺少 notes 表，请在 Supabase SQL Editor 中执行 supabase/schema.sql 后重试。";
+  }
+  if (code === "23505") {
+    return "该候选数已存在。";
+  }
+  return "笔记操作失败，请稍后重试。";
+}
 
 export default function RoomPage() {
   const params = useParams<{ code: string }>();
@@ -47,6 +66,7 @@ export default function RoomPage() {
   const [status, setStatus] = useState<Status>("loading");
   const [copied, setCopied] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const presenceKey = useId();
   const selectedRef = useRef<number | null>(null);
@@ -183,14 +203,18 @@ export default function RoomPage() {
       }
       setMoves((movesData as Move[]) ?? []);
 
-      // 笔记加载失败不阻塞进房（表不存在时静默跳过）
-      const { data: notesData } = await supabase
+      // 笔记加载失败不阻塞进房；表不存在（PGRST205）时给出明确提示
+      const { data: notesData, error: notesError } = await supabase
         .from("notes")
         .select("*")
         .eq("room_id", code)
         .order("id", { ascending: true });
       if (!cancelled) {
-        setNotes((notesData as Note[]) ?? []);
+        if (notesError) {
+          setNoteError(noteErrorMessage(notesError.code));
+        } else {
+          setNotes((notesData as Note[]) ?? []);
+        }
       }
 
       if (!cancelled) setStatus("ready");
@@ -358,6 +382,8 @@ export default function RoomPage() {
           setNotes((prev) =>
             prev.filter((n) => !(n.cell === cell && n.digit === digit)),
           );
+        } else {
+          setNoteError(noteErrorMessage(error.code));
         }
       } else {
         const { data, error } = await supabase
@@ -365,7 +391,11 @@ export default function RoomPage() {
           .insert({ room_id: code, cell, digit, player_name: identity.name })
           .select()
           .single();
-        if (!error && data) appendNote(data as Note);
+        if (!error && data) {
+          appendNote(data as Note);
+        } else if (error) {
+          setNoteError(noteErrorMessage(error.code));
+        }
       }
     },
     [supabase, room, code, identity.name, appendNote],
@@ -374,7 +404,12 @@ export default function RoomPage() {
   const clearNotesInCell = useCallback(
     async (cell: number) => {
       if (!supabase) return;
-      await supabase.from("notes").delete().eq("room_id", code).eq("cell", cell);
+      const { error } = await supabase
+        .from("notes")
+        .delete()
+        .eq("room_id", code)
+        .eq("cell", cell);
+      if (error) setNoteError(noteErrorMessage(error.code));
     },
     [supabase, code],
   );
@@ -447,8 +482,14 @@ export default function RoomPage() {
         <p className="text-3xl">⚙️</p>
         <h1 className="mt-3 text-xl font-semibold">Supabase 尚未配置</h1>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          请先设置 <code className="text-sky-600 dark:text-sky-400">NEXT_PUBLIC_SUPABASE_URL</code> 和{" "}
-          <code className="text-sky-600 dark:text-sky-400">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{" "}
+          请先设置{" "}
+          <code className="text-[var(--accent)]">
+            NEXT_PUBLIC_SUPABASE_URL
+          </code>{" "}
+          和{" "}
+          <code className="text-[var(--accent)]">
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+          </code>{" "}
           环境变量，并执行 supabase/schema.sql 建表。
         </p>
         <button
@@ -465,7 +506,7 @@ export default function RoomPage() {
   if (status === "loading") {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-sky-500 dark:border-zinc-700 dark:border-t-sky-400" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-200 border-t-[var(--accent)] dark:border-zinc-800" />
       </main>
     );
   }
@@ -501,25 +542,45 @@ export default function RoomPage() {
         <button
           type="button"
           onClick={() => router.push("/")}
-          className="ml-12 text-sm text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+          className="ml-12 flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
         >
-          ← 首页
+          <ArrowLeftIcon className="h-4 w-4" />
+          首页
         </button>
         <div className="flex items-center gap-2">
-          <span className="rounded-lg border border-zinc-300 bg-zinc-100 px-3 py-1.5 font-mono text-sm tracking-widest dark:border-zinc-700 dark:bg-zinc-900">
+          <span className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 font-mono text-sm tracking-[0.2em] dark:border-zinc-800 dark:bg-zinc-900">
             {code}
           </span>
           <button
             type="button"
             onClick={copyLink}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:border-sky-500 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-sky-300"
+            className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] dark:border-zinc-800 dark:text-zinc-300"
           >
-            {copied ? "已复制 ✓" : "复制邀请链接"}
+            {copied ? (
+              <CheckIcon className="h-4 w-4" />
+            ) : (
+              <CopyIcon className="h-4 w-4" />
+            )}
+            {copied ? "已复制" : "邀请链接"}
           </button>
         </div>
       </header>
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+      {noteError && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-300">
+          <span className="flex-1">{noteError}</span>
+          <button
+            type="button"
+            onClick={() => setNoteError(null)}
+            aria-label="关闭提示"
+            className="shrink-0 rounded px-1 text-lg leading-none opacity-60 transition-opacity hover:opacity-100"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <div className="flex-1">
           {board && puzzleGrid && (
             <SudokuBoard
@@ -532,54 +593,74 @@ export default function RoomPage() {
               onSelect={onSelect}
             />
           )}
-          <p className="mt-3 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            点击格子后用键盘或九宫格填写 · ✏️ 笔记模式打草稿（按 N 切换）· 红色为冲突
+          <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
+            选中格子后输入数字 · 按{" "}
+            <kbd className="rounded border border-zinc-200 px-1.5 py-0.5 font-mono text-xs dark:border-zinc-800">
+              N
+            </kbd>{" "}
+            切换笔记模式 · 红色为冲突
           </p>
         </div>
 
-        <aside className="w-full space-y-3 lg:w-72 lg:shrink-0">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setNoteMode((v) => !v)}
-              aria-pressed={noteMode}
-              className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors ${
-                noteMode
-                  ? "border-amber-400 bg-amber-400/15 text-amber-700 dark:border-amber-500 dark:text-amber-300"
-                  : "border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
-              }`}
-            >
-              ✏️ 笔记{noteMode ? " 开" : " 关"}
-            </button>
+        <aside className="w-full space-y-4 lg:w-72 lg:shrink-0">
+          <div className="flex gap-2">
+            <div className="flex flex-1 rounded-xl border border-zinc-200 bg-zinc-50 p-0.5 dark:border-zinc-800 dark:bg-zinc-900">
+              <button
+                type="button"
+                onClick={() => setNoteMode(false)}
+                aria-pressed={!noteMode}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors ${
+                  !noteMode
+                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
+                    : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                <PenIcon className="h-4 w-4" />
+                数字
+              </button>
+              <button
+                type="button"
+                onClick={() => setNoteMode(true)}
+                aria-pressed={noteMode}
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors ${
+                  noteMode
+                    ? "bg-white text-[var(--accent)] shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
+                    : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                <PencilIcon className="h-4 w-4" />
+                笔记
+              </button>
+            </div>
             <button
               type="button"
               onClick={() => placeInSelectedCell(0)}
-              className="flex items-center justify-center gap-1.5 rounded-lg border border-zinc-300 px-3 py-2.5 text-sm font-medium text-zinc-600 transition-colors hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500"
+              aria-label="擦除"
+              className="flex w-12 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
             >
-              🧹 擦除
+              <EraserIcon className="h-4 w-4" />
             </button>
           </div>
-          <NumberPad
-            remaining={remaining}
-            noteMode={noteMode}
-            onSelect={placeInSelectedCell}
-          />
+
+          <NumberPad remaining={remaining} onSelect={placeInSelectedCell} />
           <PlayerList players={players} selfKey={presenceKey} />
         </aside>
       </div>
 
       {won && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
-          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
             <div className="text-5xl">🎉</div>
-            <h2 className="mt-4 text-2xl font-bold">恭喜解出！</h2>
+            <h2 className="mt-4 text-2xl font-bold tracking-tight">
+              恭喜解出！
+            </h2>
             <p className="mt-2 text-zinc-500 dark:text-zinc-400">
               你们合作完成了这道数独。
             </p>
             <button
               type="button"
               onClick={() => router.push("/")}
-              className="mt-6 w-full rounded-lg bg-sky-500 py-2.5 font-semibold text-white hover:bg-sky-400"
+              className="mt-6 w-full rounded-lg bg-[var(--accent)] py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               再来一局
             </button>

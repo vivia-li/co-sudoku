@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MoonIcon, SunIcon } from "@/components/icons";
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(true);
@@ -26,9 +27,13 @@ export default function ThemeToggle() {
       onClick={toggle}
       aria-label={dark ? "切换到浅色背景" : "切换到深色背景"}
       title={dark ? "切换到浅色背景" : "切换到深色背景"}
-      className="fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-zinc-300 bg-white text-lg shadow-sm transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+      className="fixed left-4 top-4 z-40 flex h-9 w-9 items-center justify-center rounded-full border border-zinc-200 bg-white/80 text-zinc-500 shadow-sm backdrop-blur transition-colors hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-400 dark:hover:text-zinc-100"
     >
-      {dark ? "☀️" : "🌙"}
+      {dark ? (
+        <SunIcon className="h-4 w-4" />
+      ) : (
+        <MoonIcon className="h-4 w-4" />
+      )}
     </button>
   );
 }

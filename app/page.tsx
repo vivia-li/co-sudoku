@@ -71,12 +71,23 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col items-center justify-center px-6 py-12">
-      <div className="mb-8 text-center">
-        <div className="mb-3 text-5xl">🧩</div>
-        <h1 className="text-4xl font-bold tracking-tight">Co-Sudoku</h1>
-        <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-          和朋友实时协作，一起解同一张数独棋盘
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-6 py-12">
+      <div className="mb-10 text-center">
+        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent)] shadow-lg shadow-indigo-500/25">
+          <span className="grid grid-cols-3 gap-1.5">
+            {[1, 1, 0, 0, 1, 0, 1, 0, 1].map((filled, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-1.5 rounded-[2px] ${
+                  filled ? "bg-white" : "bg-white/25"
+                }`}
+              />
+            ))}
+          </span>
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Co-Sudoku</h1>
+        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          与朋友实时协作，一起解开同一张数独棋盘
         </p>
       </div>
 
@@ -86,7 +97,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="w-full space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900/50">
+      <div className="w-full space-y-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/60">
         <div>
           <label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             你的昵称
@@ -95,7 +106,7 @@ export default function HomePage() {
             value={name}
             onChange={(e) => updateName(e.target.value)}
             placeholder="输入昵称，方便朋友认出你"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500 dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-lg border border-zinc-200 bg-zinc-50/50 px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-[var(--accent)] focus:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:focus:bg-zinc-900"
           />
         </div>
 
@@ -109,14 +120,14 @@ export default function HomePage() {
                 key={d.value}
                 type="button"
                 onClick={() => setDifficulty(d.value)}
-                className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                className={`rounded-lg border px-3 py-2.5 text-sm transition-colors ${
                   difficulty === d.value
-                    ? "border-sky-500 bg-sky-500/15 text-sky-600 dark:text-sky-300"
-                    : "border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-zinc-500"
+                    ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "border-zinc-200 bg-white text-zinc-500 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:border-zinc-700"
                 }`}
               >
                 <div className="font-medium">{d.label}</div>
-                <div className="text-xs opacity-70">{d.desc}</div>
+                <div className="mt-0.5 text-xs opacity-70">{d.desc}</div>
               </button>
             ))}
           </div>
@@ -126,7 +137,7 @@ export default function HomePage() {
           type="button"
           onClick={createRoom}
           disabled={busy}
-          className="w-full rounded-lg bg-sky-500 py-3 font-semibold text-white transition-colors hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-[var(--accent)] py-3 text-sm font-semibold text-white shadow-sm shadow-indigo-500/25 transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {busy ? "创建中…" : "创建房间"}
         </button>
@@ -144,12 +155,12 @@ export default function HomePage() {
             onKeyDown={(e) => e.key === "Enter" && joinRoom()}
             placeholder="房间号，如 ABC123"
             maxLength={8}
-            className="flex-1 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm uppercase tracking-widest outline-none focus:border-sky-500 dark:border-zinc-700 dark:bg-zinc-950"
+            className="flex-1 rounded-lg border border-zinc-200 bg-zinc-50/50 px-3 py-2.5 text-sm uppercase tracking-widest outline-none transition-colors placeholder:normal-case placeholder:tracking-normal placeholder:text-zinc-400 focus:border-[var(--accent)] focus:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:focus:bg-zinc-900"
           />
           <button
             type="button"
             onClick={joinRoom}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:border-sky-500 hover:text-sky-600 dark:border-zinc-700 dark:text-zinc-200 dark:hover:text-sky-300"
+            className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] dark:border-zinc-800 dark:text-zinc-200"
           >
             加入
           </button>
@@ -157,7 +168,7 @@ export default function HomePage() {
       </div>
 
       {error && (
-        <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="mt-4 text-sm text-red-500 dark:text-red-400" role="alert">
           {error}
         </p>
       )}

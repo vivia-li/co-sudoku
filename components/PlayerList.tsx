@@ -1,6 +1,7 @@
 "use client";
 
 import type { Player } from "@/lib/game";
+import { UsersIcon } from "@/components/icons";
 
 export default function PlayerList({
   players,
@@ -10,28 +11,32 @@ export default function PlayerList({
   selfKey: string;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-      <h2 className="mb-3 text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-        在线玩家 · {players.length}
+    <div className="rounded-xl border border-zinc-200/80 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+      <h2 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        <UsersIcon className="h-3.5 w-3.5" />
+        在线玩家
+        <span className="ml-auto text-zinc-300 dark:text-zinc-600">
+          {players.length}
+        </span>
       </h2>
-      <ul className="space-y-2">
+      <ul className="space-y-2.5">
         {players.length === 0 && (
           <li className="text-sm text-zinc-400 dark:text-zinc-500">
             等待其他玩家加入…
           </li>
         )}
         {players.map((p) => (
-          <li key={p.id} className="flex items-center gap-2 text-sm">
+          <li key={p.id} className="flex items-center gap-2.5 text-sm">
             <span
-              className="h-3 w-3 shrink-0 rounded-full"
+              className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/60 dark:ring-black/40"
               style={{ backgroundColor: p.color }}
             />
-            <span className="truncate text-zinc-800 dark:text-zinc-200">
+            <span className="truncate text-zinc-700 dark:text-zinc-200">
               {p.name}
             </span>
             {p.id === selfKey && (
-              <span className="shrink-0 text-xs text-zinc-400 dark:text-zinc-500">
-                （你）
+              <span className="shrink-0 rounded-full bg-zinc-200/70 px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                你
               </span>
             )}
           </li>

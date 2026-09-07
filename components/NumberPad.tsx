@@ -2,17 +2,14 @@
 
 export default function NumberPad({
   remaining,
-  noteMode = false,
   onSelect,
 }: {
   /** index 1..9，表示该数字还剩多少个没填 */
   remaining: number[];
-  /** 笔记模式下显示虚线边框，提示当前输入会写入草稿 */
-  noteMode?: boolean;
   onSelect: (digit: number) => void;
 }) {
   return (
-    <div className="mx-auto grid w-full max-w-[320px] grid-cols-3 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
         const rem = remaining[d] ?? 0;
         const done = rem <= 0;
@@ -21,21 +18,22 @@ export default function NumberPad({
             key={d}
             type="button"
             onClick={() => onSelect(d)}
-            className={`relative flex aspect-square flex-col items-center justify-center rounded-lg border text-lg font-semibold transition-colors ${
-              noteMode ? "border-dashed " : ""
-            }${
+            aria-label={`输入 ${d}`}
+            className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border text-xl font-semibold transition-all duration-150 active:scale-95 ${
               done
-                ? "border-emerald-300 bg-emerald-50 text-emerald-600 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400"
-                : "border-zinc-300 bg-white text-zinc-800 hover:border-sky-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-sky-500"
+                ? "border-transparent bg-zinc-100 text-zinc-300 dark:bg-zinc-900 dark:text-zinc-600"
+                : "border-zinc-200 bg-white text-zinc-800 shadow-sm hover:border-[var(--accent)] hover:shadow dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:border-[var(--accent)]"
             }`}
           >
-            <span className="leading-none">{d}</span>
+            <span className="leading-none tabular-nums">{d}</span>
             <span
-              className={`mt-1 text-xs font-normal ${
-                done ? "" : "text-zinc-400 dark:text-zinc-500"
+              className={`mt-1.5 text-[11px] font-medium leading-none tabular-nums ${
+                done
+                  ? "text-zinc-300 dark:text-zinc-600"
+                  : "text-zinc-400 dark:text-zinc-500"
               }`}
             >
-              {rem}
+              {done ? "·" : rem}
             </span>
           </button>
         );
