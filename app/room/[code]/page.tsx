@@ -572,8 +572,8 @@ export default function RoomPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-6">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-3 py-3 sm:px-4 sm:py-6">
+      <header className="mb-2 flex flex-wrap items-center justify-between gap-3 sm:mb-4">
         <button
           type="button"
           onClick={() => router.push("/")}
@@ -615,7 +615,7 @@ export default function RoomPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start sm:gap-6">
         <div className="flex-1">
           {board && puzzleGrid && (
             <SudokuBoard
@@ -628,7 +628,7 @@ export default function RoomPage() {
               onSelect={onSelect}
             />
           )}
-          <p className="mt-4 text-center text-sm text-zinc-400 dark:text-zinc-500">
+          <p className="mt-2 hidden text-center text-sm text-zinc-400 dark:text-zinc-500 sm:block">
             选中格子后输入数字 · 按{" "}
             <kbd className="rounded border border-zinc-200 px-1.5 py-0.5 font-mono text-xs dark:border-zinc-800">
               N
@@ -637,7 +637,7 @@ export default function RoomPage() {
           </p>
         </div>
 
-        <aside className="w-full space-y-4 lg:w-72 lg:shrink-0">
+        <aside className="w-full space-y-3 lg:w-72 lg:shrink-0 sm:space-y-4">
           <div className="flex gap-2">
             <div className="flex flex-1 rounded-xl border border-zinc-200 bg-zinc-50 p-0.5 dark:border-zinc-800 dark:bg-zinc-900">
               <button

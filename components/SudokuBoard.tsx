@@ -56,7 +56,7 @@ export default function SudokuBoard({
       <div
         key={i}
         onClick={() => onSelect(i)}
-        className={`group relative flex aspect-square cursor-pointer items-center justify-center text-xl font-medium tabular-nums transition-colors sm:text-3xl ${
+        className={`group relative flex aspect-square cursor-pointer items-center justify-center text-lg font-medium tabular-nums transition-colors sm:text-3xl ${
           clue
             ? "bg-zinc-50/60 text-zinc-900 dark:bg-zinc-900/30 dark:text-zinc-100"
             : "text-[var(--accent)]"
@@ -110,7 +110,7 @@ export default function SudokuBoard({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-xl border-2 border-[var(--board-line-strong)] bg-white shadow-lg shadow-zinc-900/[0.04] lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
+    <div className="mx-auto grid w-full max-w-[340px] grid-cols-9 overflow-hidden rounded-xl border-2 border-[var(--board-line-strong)] bg-white shadow-lg shadow-zinc-900/[0.04] sm:max-w-[480px] lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
       {cells}
     </div>
   );
