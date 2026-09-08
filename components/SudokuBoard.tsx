@@ -110,7 +110,7 @@ export default function SudokuBoard({
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[340px] grid-cols-9 overflow-hidden rounded-xl border-2 border-[var(--board-line-strong)] bg-white shadow-lg shadow-zinc-900/[0.04] sm:max-w-[480px] lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
+    <div className="mx-auto grid w-full max-w-[480px] grid-cols-9 overflow-hidden rounded-xl border-2 border-[var(--board-line-strong)] bg-white shadow-lg shadow-zinc-900/[0.04] lg:max-w-[540px] dark:bg-zinc-950 dark:shadow-black/40">
       {cells}
     </div>
   );

@@ -7,10 +7,10 @@ import { generateRoomCode } from "@/lib/game";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { getIdentity, saveIdentity } from "@/lib/player";
 
-const DIFFICULTIES: { value: Difficulty; label: string; desc: string }[] = [
-  { value: "easy", label: "简单", desc: "45 个提示数" },
-  { value: "medium", label: "中等", desc: "36 个提示数" },
-  { value: "hard", label: "困难", desc: "28 个提示数" },
+const DIFFICULTIES: { value: Difficulty; label: string }[] = [
+  { value: "easy", label: "简单" },
+  { value: "medium", label: "中等" },
+  { value: "hard", label: "困难" },
 ];
 
 export default function HomePage() {
@@ -127,7 +127,6 @@ export default function HomePage() {
                 }`}
               >
                 <div className="font-medium">{d.label}</div>
-                <div className="mt-0.5 text-xs opacity-70">{d.desc}</div>
               </button>
             ))}
           </div>

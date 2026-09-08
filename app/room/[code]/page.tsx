@@ -644,7 +644,7 @@ export default function RoomPage() {
                 type="button"
                 onClick={() => setNoteMode(false)}
                 aria-pressed={!noteMode}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors sm:py-2 ${
                   !noteMode
                     ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
                     : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -657,7 +657,7 @@ export default function RoomPage() {
                 type="button"
                 onClick={() => setNoteMode(true)}
                 aria-pressed={noteMode}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-1.5 rounded-[10px] px-3 py-1.5 text-sm font-medium transition-colors sm:py-2 ${
                   noteMode
                     ? "bg-white text-[var(--accent)] shadow-sm dark:bg-zinc-800 dark:text-zinc-100"
                     : "text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
